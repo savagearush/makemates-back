@@ -1,6 +1,6 @@
 import { db } from "../db.js";
 import bcrypt from "bcrypt";
-import jwt from "jwt-node";
+import jwt from "jsonwebtoken";
 
 export const register = (req, res) => {
   // check if user exist
@@ -41,14 +41,19 @@ export const login = (req, res) => {
   db.query(q, [req.body.emailId], (err, data) => {
     if (err) return res.status(409).json(err);
     if (data.length) {
-      const token = jwt.sign({ _userId: data[0].userId }, "secret-key");
-      console.log(token);
-      res
-        .cookie("access-token", token, {
-          httpOnly: true,
+      if (
+        bcrypt.compare(req.body.password, data[0].password, (err, result) => {
+          if (!result) return res.status(409).json("Incorrect password !!");
+          // generate Access Token
+          const token = jwt.sign({ _userId: data[0].userId }, "secret-key");
+          res
+            .cookie("access-token", token, {
+              httpOnly: true,
+            })
+            .status(200)
+            .json("Logged In !!");
         })
-        .status(200)
-        .json("Logged In !!");
+      );
     }
   });
 };
